@@ -6,22 +6,13 @@ Please use this file to briefly outline your technical choices and the rationale
 
 _Why did you structure your state the way you did? Which patterns did you choose for handling the flaky API requests, loading states, and error handling?_
 
-<<<<<<< HEAD
 State Management & Architecture:
 
 1. Store search, category, and page in the URL so the app is shareable, refresh-safe, and works with browser navigation.
 2. keep API data in a single state object to match the response shape and keep things organized.
 3. Separate states for loading and error make rendering simple and predictable.
 
-For Handling Flaky API: 
-=======
-State Management & Architecture: 
-1. Store search, category, and page in the URL so the app is shareable, refresh-safe, and works with browser navigation. 
-2. keep API data in a single state object to match the response shape and keep things organized. 
-3. Separate states for loading and error make rendering simple and predictable.
-
 For handling flaky api: 
->>>>>>> 50dfda38a0f14fc051d93f79cf48dc0383836583
 4. Implemented retry with exponential backoff (3 attempts). 
 5. Prevents immediate failure and avoids spamming the server. 
 6. Shows an error + Retry button if all attempts fail.
