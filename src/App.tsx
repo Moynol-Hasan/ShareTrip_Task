@@ -1,83 +1,115 @@
-import { Search, Loader2 } from 'lucide-react';
-// import { api } from './services/api'; 
 // Use this to fetch data: api.fetchProducts(...)
+import { api } from "./services/api";
+import { useEffect, useState, useCallback } from "react";
+import type { PaginatedResponse, Product } from "./types/product";
+import ProductList from "./components/products/productList";
+import { useProductFilter } from "./hooks/useProductFilter";
+import ProductListFilters from "./components/products/productListFilters";
+import Pagination from "./components/Pagination";
 
 function App() {
+  const { search, category, page, setFilters } = useProductFilter();
+  const [products, setProducts] = useState<PaginatedResponse<Product>>({
+    data: [],
+    total: 0,
+    page: 1,
+    limit: 12,
+    totalPages: 0,
+  });
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch with simple retry logic (exponential backoff)
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    const maxAttempts = 3;
+    let attempt = 0;
+    let lastErr: unknown = null;
+
+    while (attempt < maxAttempts) {
+      try {
+        const data = await api.fetchProducts({
+          page,
+          limit: 10,
+          search,
+          category,
+        });
+        setProducts(data);
+        setError(null);
+        setLoading(false);
+        return;
+      } catch (err: unknown) {
+        lastErr = err;
+        attempt += 1;
+        // wait with exponential backoff before retrying
+        const wait = 300 * Math.pow(2, attempt - 1);
+        await new Promise((r) => setTimeout(r, wait));
+      }
+    }
+
+    setLoading(false);
+    setError(lastErr instanceof Error ? lastErr.message : String(lastErr));
+  }, [page, search, category]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  const handleRetry = () => {
+    fetchProducts();
+  };
+
   return (
-    <div style={{ minHeight: '100vh', padding: '2rem' }}>
+    <div style={{ minHeight: "100vh", padding: "2rem" }}>
       {/* Header Section */}
-      <header className="glass-panel" style={{ padding: '2rem', marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+      <header
+        className="glass-panel"
+        style={{ padding: "2rem", marginBottom: "2rem" }}
+      >
+        <h1
+          style={{ fontSize: "2rem", fontWeight: 600, marginBottom: "0.5rem" }}
+        >
           Premium Products
         </h1>
-        <p style={{ color: 'var(--text-muted)' }}>
-          Browse our collection. Handling the flaky API gracefully is part of the challenge.
+        <p style={{ color: "var(--text-muted)" }}>
+          Browse our collection. Handling the flaky API gracefully is part of
+          the challenge.
         </p>
       </header>
 
-      {/* Controls Section */}
-      <section style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
-        <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', padding: '0.75rem 1rem', flex: 1, maxWidth: '400px' }}>
-          <Search size={20} color="var(--text-muted)" style={{ marginRight: '0.75rem' }} />
-          <input 
-            type="text" 
-            placeholder="Search products..." 
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-main)',
-              outline: 'none',
-              width: '100%',
-              fontSize: '1rem'
-            }}
-          />
-        </div>
-        
-        <select 
-          className="glass-panel"
-          style={{
-            padding: '0.75rem 1rem',
-            color: 'var(--text-main)',
-            outline: 'none',
-            fontSize: '1rem',
-            cursor: 'pointer',
-            appearance: 'none',
-          }}
-        >
-          <option value="" style={{ background: 'var(--surface)' }}>All Categories</option>
-          <option value="electronics" style={{ background: 'var(--surface)' }}>Electronics</option>
-          <option value="clothing" style={{ background: 'var(--surface)' }}>Clothing</option>
-          <option value="home" style={{ background: 'var(--surface)' }}>Home</option>
-          <option value="outdoors" style={{ background: 'var(--surface)' }}>Outdoors</option>
-        </select>
-      </section>
+      {/* product filter */}
+      <ProductListFilters loading={loading} />
 
-      {/* Main Grid Placeholder */}
-      <main>
-        {/* Placeholder state to visually guide candidate */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '4rem',
-          border: '1px dashed var(--border)',
-          borderRadius: '16px',
-        }}>
-           <Loader2 size={40} color="var(--primary)" className="spin" style={{ marginBottom: '1rem', animation: 'spin 2s linear infinite' }} />
-           <style>
-             {`
-               @keyframes spin {
-                 100% { transform: rotate(360deg); }
-               }
-             `}
-           </style>
-           <h2 style={{ marginBottom: '0.5rem' }}>Start Building Your Grid!</h2>
-           <p style={{ color: 'var(--text-muted)', textAlign: 'center', maxWidth: '500px' }}>
-             Use <code>src/services/api.ts</code> to fetch the products. Remember to build pagination and handle the network errors that the API frequently throws!
-           </p>
+      {/* product list */}
+      <ProductList products={products} loading={loading} error={error} />
+
+      {/* pagination */}
+      <div className="flex flex-col md:flex-row items-center justify-between mt-4 gap-5">
+        <p>
+          Showing {products.total} product{products.total === 1 ? "" : "s"}
+        </p>
+        <Pagination
+          page={page}
+          totalPages={products.totalPages}
+          onPageChange={(page) => setFilters({ page })}
+          disabled={loading}
+        />
+      </div>
+      {error && (
+        <div
+          style={{ display: "flex", justifyContent: "center", marginTop: 12 }}
+        >
+          <button
+            className="glass-panel"
+            onClick={handleRetry}
+            style={{ padding: "0.5rem 1rem" }}
+          >
+            Retry
+          </button>
         </div>
-      </main>
+      )}
     </div>
   );
 }
