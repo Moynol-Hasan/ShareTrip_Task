@@ -10,9 +10,9 @@ State Management & Architecture:
 2. keep API data in a single state object to match the response shape and keep things organized.
 3. Separate states for loading and error make rendering simple and predictable.
 
-For Handling Flaky API:
-4. Implemented retry with exponential backoff (3 attempts).
-5. Prevents immediate failure and avoids spamming the server.
+For Handling Flaky API:  
+4. Implemented retry with exponential backoff (3 attempts).  
+5. Prevents immediate failure and avoids spamming the server.  
 6. Shows an error + Retry button if all attempts fail.
 
 7. Reset page to 1 when filters change (better UX)
